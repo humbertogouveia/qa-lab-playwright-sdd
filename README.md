@@ -31,6 +31,7 @@ O alvo é o **[QA Lab App](qa-lab-app/)**, uma loja virtual de demonstração qu
 
 | Etapa | Agente | Entrada | Saída |
 | --- | --- | --- | --- |
+| Especificar | [requirements-writer](.claude/agents/requirements-writer.md) | Contrato da API + regras de negócio do app | `specs/<funcionalidade>.requirements.md` (validado pelo QA) |
 | Planejar | [playwright-test-planner](.claude/agents/playwright-test-planner.md) | App rodando + `tests/seed.spec.ts` | `specs/<funcionalidade>.plan.md` |
 | Gerar | [playwright-test-generator](.claude/agents/playwright-test-generator.md) | Um cenário do plano | `tests/<funcionalidade>/*.spec.ts` |
 | Curar | [playwright-test-healer](.claude/agents/playwright-test-healer.md) | Teste falhando | Teste corrigido ou marcado com a causa |
