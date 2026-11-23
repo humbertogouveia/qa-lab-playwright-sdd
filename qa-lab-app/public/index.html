@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Lab Store</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#/" data-testid="brand">QA Lab Store</a>
+      <nav aria-label="Navegação principal">
+        <a href="#/" data-testid="nav-catalog">Catálogo</a>
+        <a href="#/cart" class="cart-link" data-testid="nav-cart">
+          <svg class="cart-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" data-testid="cart-icon">
+            <path d="M3 4h2.2l2.3 10.2a1.6 1.6 0 0 0 1.6 1.3h8.1a1.6 1.6 0 0 0 1.5-1.1L20.5 8H6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="9.5" cy="19.2" r="1.5" fill="currentColor"/>
+            <circle cx="17" cy="19.2" r="1.5" fill="currentColor"/>
+          </svg>
+          <span>Carrinho</span>
+          <span id="cart-count" class="cart-count" data-testid="cart-count" aria-label="Itens no carrinho">0</span>
+        </a>
+        <a href="#/orders" id="nav-orders" data-testid="nav-orders" hidden>Meus pedidos</a>
+        <a href="#/login" id="nav-login" data-testid="nav-login">Entrar</a>
+        <a href="#/register" id="nav-register" data-testid="nav-register">Cadastrar</a>
+        <span id="user-name" data-testid="user-name" hidden></span>
+        <button type="button" id="logout" data-testid="logout" hidden>Sair</button>
+      </nav>
+    </header>
+    <div id="toast" role="status" aria-live="polite" data-testid="toast"></div>
+    <main id="app" tabindex="-1"></main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

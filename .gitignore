@@ -1,0 +1,22 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Logs e snapshots gerados pelo Playwright MCP
+.playwright-mcp/
+
+# Variáveis de ambiente (credenciais de teste)
+.env
+.env.*
+!.env.example
+
+# Configurações locais do Claude Code
+.claude/settings.local.json
+
+# macOS
+.DS_Store

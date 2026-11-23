@@ -1,0 +1,217 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QA Lab App API",
+    "version": "1.0.0",
+    "description": "API da loja de demonstração para prática de automação de testes. Os dados ficam em memória e voltam ao estado inicial com POST /api/test/reset."
+  },
+  "servers": [{ "url": "/" }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer" }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "details": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "required": ["fullName", "cep", "street", "number", "city"],
+        "properties": {
+          "fullName": { "type": "string" },
+          "cep": { "type": "string", "example": "01310-100" },
+          "street": { "type": "string" },
+          "number": { "type": "string" },
+          "city": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": { "summary": "Verifica se a API está no ar", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/test/reset": {
+      "post": { "summary": "Restaura dados iniciais e desliga todos os bugs", "tags": ["Teste"], "responses": { "200": { "description": "Dados restaurados" } } }
+    },
+    "/api/test/bugs": {
+      "get": { "summary": "Lista o estado dos bugs propositais", "tags": ["Teste"], "responses": { "200": { "description": "Estado atual" } } },
+      "post": {
+        "summary": "Liga ou desliga bugs propositais",
+        "tags": ["Teste"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "checkoutServerError": { "type": "boolean" },
+                  "wrongTotal": { "type": "boolean" },
+                  "cepValidationBroken": { "type": "boolean" },
+                  "slowCatalog": { "type": "boolean" },
+                  "couponAppliedTwice": { "type": "boolean" },
+                  "loginAcceptsAnyPassword": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Estado atualizado" }, "400": { "description": "Bug desconhecido" } }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Cadastra um cliente",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Conta criada, retorna token" }, "400": { "description": "Dados inválidos" }, "409": { "description": "E-mail já cadastrado" } }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Autentica e retorna um token Bearer",
+        "tags": ["Autenticação"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": { "email": { "type": "string" }, "password": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Token e usuário" }, "400": { "description": "Campos ausentes" }, "401": { "description": "Credenciais inválidas" } }
+      }
+    },
+    "/api/auth/me": {
+      "get": { "summary": "Usuário autenticado", "tags": ["Autenticação"], "security": [{ "bearerAuth": [] }], "responses": { "200": { "description": "Usuário" }, "401": { "description": "Não autenticado" } } }
+    },
+    "/api/auth/logout": {
+      "post": { "summary": "Encerra a sessão", "tags": ["Autenticação"], "security": [{ "bearerAuth": [] }], "responses": { "204": { "description": "Sessão encerrada" } } }
+    },
+    "/api/categories": {
+      "get": { "summary": "Lista as categorias", "tags": ["Catálogo"], "responses": { "200": { "description": "Lista de categorias" } } }
+    },
+    "/api/products": {
+      "get": {
+        "summary": "Lista produtos com busca, filtro e paginação",
+        "tags": ["Catálogo"],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 8, "maximum": 50 } }
+        ],
+        "responses": { "200": { "description": "Página de produtos" } }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "summary": "Detalhe de um produto",
+        "tags": ["Catálogo"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Produto" }, "404": { "description": "Não encontrado" } }
+      }
+    },
+    "/api/cart": {
+      "get": { "summary": "Carrinho do usuário", "tags": ["Carrinho"], "security": [{ "bearerAuth": [] }], "responses": { "200": { "description": "Itens e subtotal" }, "401": { "description": "Não autenticado" } } },
+      "delete": { "summary": "Esvazia o carrinho", "tags": ["Carrinho"], "security": [{ "bearerAuth": [] }], "responses": { "204": { "description": "Carrinho vazio" } } }
+    },
+    "/api/cart/items": {
+      "post": {
+        "summary": "Adiciona um produto ao carrinho",
+        "tags": ["Carrinho"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productId", "quantity"],
+                "properties": { "productId": { "type": "integer" }, "quantity": { "type": "integer", "minimum": 1, "maximum": 10 } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Carrinho atualizado" }, "400": { "description": "Quantidade inválida" }, "404": { "description": "Produto não encontrado" }, "409": { "description": "Estoque insuficiente" } }
+      }
+    },
+    "/api/cart/items/{productId}": {
+      "patch": {
+        "summary": "Altera a quantidade de um item",
+        "tags": ["Carrinho"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Carrinho atualizado" }, "400": { "description": "Quantidade inválida" }, "404": { "description": "Item não está no carrinho" }, "409": { "description": "Estoque insuficiente" } }
+      },
+      "delete": {
+        "summary": "Remove um item do carrinho",
+        "tags": ["Carrinho"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Carrinho atualizado" }, "404": { "description": "Item não está no carrinho" } }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "summary": "Finaliza a compra com os itens do carrinho",
+        "description": "Frete de R$ 29,90, grátis a partir de R$ 500,00 de subtotal. Cupons: QALAB10 (10%) e QALAB20 (20%). Boleto gera pedido PENDING; cartão e Pix geram PAID.",
+        "tags": ["Pedidos"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["address", "paymentMethod"],
+                "properties": {
+                  "address": { "$ref": "#/components/schemas/Address" },
+                  "paymentMethod": { "type": "string", "enum": ["card", "pix", "boleto"] },
+                  "couponCode": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Pedido criado" }, "400": { "description": "Carrinho vazio ou dados inválidos" }, "409": { "description": "Estoque insuficiente" }, "500": { "description": "Erro interno (bug checkoutServerError)" } }
+      },
+      "get": { "summary": "Pedidos do usuário", "tags": ["Pedidos"], "security": [{ "bearerAuth": [] }], "responses": { "200": { "description": "Lista de pedidos" } } }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "summary": "Detalhe de um pedido",
+        "tags": ["Pedidos"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Pedido" }, "403": { "description": "Pedido de outro usuário" }, "404": { "description": "Não encontrado" } }
+      }
+    },
+    "/api/admin/orders": {
+      "get": { "summary": "Todos os pedidos (somente admin)", "tags": ["Pedidos"], "security": [{ "bearerAuth": [] }], "responses": { "200": { "description": "Lista de pedidos" }, "403": { "description": "Acesso negado" } } }
+    }
+  }
+}

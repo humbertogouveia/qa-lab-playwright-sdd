@@ -1,0 +1,22 @@
+{
+  "name": "qa-lab-playwright-sdd",
+  "version": "1.0.0",
+  "description": "Automação E2E do QA Lab App com Playwright + TypeScript, guiada por Spec-Driven Development (SDD) e agentes de IA.",
+  "private": true,
+  "author": "Humberto Dente Gouveia",
+  "license": "ISC",
+  "type": "commonjs",
+  "scripts": {
+    "setup": "npm install && npm install --prefix qa-lab-app && npx playwright install chromium",
+    "app:start": "npm start --prefix qa-lab-app",
+    "app:start:bugs": "BUGS=wrongTotal,loginAcceptsAnyPassword npm start --prefix qa-lab-app",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6"
+  }
+}
