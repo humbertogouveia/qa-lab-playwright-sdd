@@ -19,6 +19,8 @@ const isLocalTarget = /localhost|127\.0\.0\.1/.test(baseURL);
  */
 export default defineConfig({
   testDir: './tests',
+  /* Reset do app uma única vez, antes da suíte (ver tests/global-setup.ts) */
+  globalSetup: require.resolve('./tests/global-setup'),
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
