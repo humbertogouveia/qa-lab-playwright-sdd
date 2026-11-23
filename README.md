@@ -49,7 +49,11 @@ qa-lab-playwright-sdd/
 ├── specs/                   # Planos de teste (fonte da verdade do SDD)
 │   └── login.plan.md
 ├── tests/                   # Testes Playwright gerados a partir dos planos
-│   └── seed.spec.ts         #   ponto de partida dos agentes (reset + login)
+│   ├── login/               #   testes por funcionalidade
+│   ├── bugs/                #   bugs reais encontrados, marcados com test.fail()
+│   ├── support/             #   fixtures, page objects e usuários de teste
+│   ├── global-setup.ts      #   reset do app uma única vez, antes da suíte
+│   └── seed.spec.ts         #   ponto de partida dos agentes
 ├── .claude/agents/          # Agentes planner, generator e healer
 ├── .github/workflows/
 │   ├── playwright.yml       #   CI da automação (sobe o app e roda os testes)
