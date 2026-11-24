@@ -2,357 +2,281 @@
 
 ## Application Overview
 
-Plano da funcionalidade de login do QA Lab Store (http://localhost:3000/#/login, SPA com rotas por hash; API em /api, POST /api/auth/login, Swagger em /api-docs). Revisado com nova exploracao real no navegador. Credenciais vindas de variaveis de ambiente (.env): TEST_CLIENTE_EMAIL / TEST_CLIENTE_PASSWORD (cliente, role customer) e TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD (admin, role admin). Todos os cenarios partem de contexto novo (sem sessionStorage) e abrem /#/login.
+Plano da funcionalidade de login do QA Lab Store (http://localhost:3000/#/login; SPA com rotas por hash; API em /api; contrato em qa-lab-app/docs/openapi.json). Derivado dos requisitos aprovados em specs/login.requirements.md (LOGIN-01 a LOGIN-19). O requisito é a fonte da verdade: o "expect" descreve o comportamento ESPERADO pelo requisito; quando a tela diverge, a linha "DIVERGÊNCIA:" registra o que ocorre de fato. Cenários que dependem de pergunta em aberto trazem "PERGUNTA EM ABERTO N" e descrevem só o comportamento observado, sem afirmar o correto. Critérios de origem QA são propostas: divergência neles é pergunta ao produto, não bug automático.
 
-Observacoes reais: formulario #login-form com novalidate (sem validacao nativa do navegador). Campos: #email (input type=email, label "E-mail", autocomplete=username, aria-describedby=err-email) e #password (type=password, label "Senha", autocomplete=current-password, aria-describedby=err-password); botao button[type=submit] "Entrar"; area de erro #form-error (data-testid=form-error, role=alert). data-testid existentes no app: brand, nav-catalog, nav-cart, cart-icon, cart-count, nav-orders ("Meus pedidos", oculto sem login), nav-login ("Entrar"), nav-register ("Cadastrar"), user-name, logout ("Sair", oculto sem login), toast, form-error, error-email, error-password. Nao existem: mostrar/ocultar senha, esqueci a senha, lembrar-me nem link de cadastro dentro do formulario (cadastro so no cabecalho, #/register). Sessao fica em sessionStorage (chaves token e user; user = {id,name,email,role}); localStorage e cookies vazios. Mensagens: "Informe e-mail e senha" (validacao no cliente: campos vazios, e-mail com formato invalido); "E-mail ou senha inválidos" (401 da API); "Erro inesperado" (HTTP 500); "Failed to fetch" (falha de rede, texto tecnico em ingles); para outros erros o app exibe o texto cru recebido (ex.: corpo 429 'Too many' e, com 200 e JSON invalido, "Cannot destructure property 'token'..."). Apos login valido: redireciona SEMPRE para /#/ (Catalogo), cabecalho mostra "Olá, <nome>", "Meus pedidos" e "Sair"; o app nao retorna a rota originalmente pedida. Rotas protegidas sem login: /#/orders e /#/checkout redirecionam ambas para /#/login?reason=auth (exibe "Entre para continuar."); (CORRECAO: o plano anterior indicava /#/login para /#/orders). Rotas /#/admin* nao existem (h1 "Página não encontrada") para qualquer perfil. Unico erro de console no carregamento: 404 de /favicon.ico; cada 401 de login gera um erro de console de recurso (esperado).
+Credenciais (somente nomes das variáveis do .env): TEST_CLIENTE_EMAIL / TEST_CLIENTE_PASSWORD (cliente) e TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD (admin). Todos os cenários partem de contexto novo (sem sessão) e de dados restaurados com POST /api/test/reset. Seed: tests/seed.spec.ts.
+
+Comportamento observável usado como referência: formulário com campos "E-mail" e "Senha" e botão "Entrar" (type=submit), área de erro com role=alert (data-testid=form-error), sempre presente e vazia até haver erro. Sessão guardada em sessionStorage (chaves token e user); localStorage e cookies vazios. Após login válido a tela vai para /#/ (h1 "Catálogo") e o cabeçalho mostra "Olá, <nome>", "Meus pedidos" e "Sair" (data-testid=logout), ocultando "Entrar" e "Cadastrar". Rotas protegidas sem sessão (/#/cart, /#/orders, /#/checkout) redirecionam para /#/login?reason=auth, com o texto "Entre para continuar.". Rotas /#/admin* exibem "Página não encontrada". Mensagens vistas hoje: "Informe e-mail e senha" (API 400), "E-mail ou senha inválidos" (API 401), texto cru do servidor para outros erros (ex.: "Internal Server Error"), "Erro inesperado" (resposta não JSON) e "Failed to fetch" (rede). Cada 400/401 de login gera um erro de console de recurso (esperado, não é falha do cenário).
+
+Matriz de rastreabilidade (critério → cenários):
+- LOGIN-01 → 2.1, 3.4
+- LOGIN-02 → 2.1
+- LOGIN-03 → 2.2
+- LOGIN-04 → 1.2, 1.3, 1.4, 3.4
+- LOGIN-05 → 2.3, 3.4
+- LOGIN-06 → 2.3
+- LOGIN-07 → 1.2, 3.5
+- LOGIN-08 → 1.2, 1.3
+- LOGIN-09 → 3.1
+- LOGIN-10 → 1.3, 3.4
+- LOGIN-11 → 1.5, 3.4
+- LOGIN-12 → 1.6, 3.1, 3.2
+- LOGIN-13 → 1.5
+- LOGIN-14 → 1.6, 3.4
+- LOGIN-15 → 4.1
+- LOGIN-16 → 4.2
+- LOGIN-17 → 2.5
+- LOGIN-18 → 1.1, 1.4, 5.1
+- LOGIN-19 → 5.2, 5.3
+
+Perguntas em aberto marcadas: 1 (cenários 2.1, 2.3, 4.1), 2 (2.4), 3 (4.3), 4 (3.3), 5 (1.5), 6 (1.3), 7 (2.3).
 
 ## Test Scenarios
 
-### 1. 1. Caminho feliz
+### 1. 1. Caminho feliz e sessão básica
 
 **Seed:** `tests/seed.spec.ts`
 
-#### 1.1. 1.1 Renderizacao da tela de login
+#### 1.1. 1.1 Renderização da tela de login
 
 **File:** `tests/login/render.spec.ts`
 
 **Steps:**
-  1. Abrir http://localhost:3000/#/login em contexto limpo
-    - expect: Titulo da pagina 'QA Lab Store' e h1 'Entrar'
-    - expect: Campos #email (label 'E-mail') e #password (label 'Senha') e botao 'Entrar' visiveis
-    - expect: #password com type=password (mascarado); #email com autocomplete=username e #password com current-password; #login-form com novalidate
-    - expect: #form-error (role=alert) vazio
-    - expect: Cabecalho com links 'Entrar' e 'Cadastrar'; sem 'Meus pedidos' e 'Sair' visiveis (elementos existem no DOM com hidden)
-    - expect: Nao ha mostrar/ocultar senha, esqueci a senha ou lembrar-me
-    - expect: Unico erro de console tolerado: 404 de /favicon.ico
+  1. Cobre: LOGIN-18. Abrir http://localhost:3000/#/login em contexto limpo.
+    - expect: Título da página 'QA Lab Store' e h1 'Entrar'
+    - expect: Campos 'E-mail' e 'Senha' localizáveis pelo rótulo e botão 'Entrar' visíveis
+    - expect: Campo de senha mascarado (type=password); e-mail com autocomplete=username e senha com autocomplete=current-password
+    - expect: Área de erro (role=alert, data-testid=form-error) presente e vazia
+    - expect: Cabeçalho com 'Entrar' e 'Cadastrar'; 'Meus pedidos' e 'Sair' não visíveis
+    - expect: Não há mostrar/ocultar senha, 'esqueci a senha' nem 'lembrar-me' (fora do escopo dos requisitos)
+    - expect: Único erro de console tolerado: 404 de /favicon.ico
 
-#### 1.2. 1.2 Login valido como cliente
+#### 1.2. 1.2 Login válido como cliente
 
 **File:** `tests/login/login-cliente.spec.ts`
 
 **Steps:**
-  1. Preencher #email com TEST_CLIENTE_EMAIL e #password com TEST_CLIENTE_PASSWORD e clicar em 'Entrar'
-    - expect: URL passa a /#/ e h1 'Catálogo' e exibido
-    - expect: Cabecalho mostra 'Olá, Cliente Teste', 'Meus pedidos' e 'Sair'; 'Entrar' e 'Cadastrar' somem
-    - expect: sessionStorage contem exatamente as chaves token e user (role 'customer'); localStorage e cookies vazios
+  1. Cobre: LOGIN-04, LOGIN-07, LOGIN-08. Preencher 'E-mail' com TEST_CLIENTE_EMAIL e 'Senha' com TEST_CLIENTE_PASSWORD e clicar em 'Entrar', capturando a resposta de POST /api/auth/login.
+    - expect: API responde 200 com token e user (id, name, email, role 'customer'); credenciais só no corpo da requisição
+    - expect: URL passa a /#/ e h1 'Catálogo' é exibido
+    - expect: Cabeçalho mostra 'Olá, Cliente Teste', 'Meus pedidos' e 'Sair'; 'Entrar' e 'Cadastrar' somem
+    - expect: sessionStorage contém token e user; a senha não aparece em storage, URL ou console
 
-#### 1.3. 1.3 Login valido como admin e diferencas por perfil
+#### 1.3. 1.3 Login válido como administrador e acesso por perfil
 
 **File:** `tests/login/login-admin.spec.ts`
 
 **Steps:**
-  1. Fazer login com TEST_ADMIN_EMAIL e TEST_ADMIN_PASSWORD
-    - expect: Redireciona para /#/ com 'Olá, Admin Teste'
-    - expect: sessionStorage.user.role = 'admin'
-    - expect: Cabecalho identico ao do cliente (nao ha item de menu exclusivo de admin)
-  2. Abrir /#/admin, /#/admin/products e /#/admin/orders
-    - expect: Cada rota exibe h1 'Página não encontrada' (sem painel admin na UI atual)
+  1. Cobre: LOGIN-04, LOGIN-08, LOGIN-10. PERGUNTA EM ABERTO 6 (área administrativa na interface). Fazer login com TEST_ADMIN_EMAIL e TEST_ADMIN_PASSWORD.
+    - expect: API responde 200 e user.role = 'admin'
+    - expect: Redireciona para /#/ com 'Olá, Admin Teste', 'Meus pedidos' e 'Sair'
+    - expect: Com o token do admin, GET /api/admin/orders responde 200
+  2. Abrir /#/admin e /#/admin/orders.
+    - expect: Observado (sem afirmar o correto, PERGUNTA EM ABERTO 6): as rotas exibem h1 'Página não encontrada'; o cabeçalho não tem item exclusivo de admin e o acesso a todos os pedidos só existe pela API
 
-#### 1.4. 1.4 Envio com a tecla Enter
+#### 1.4. 1.4 Envio do formulário com a tecla Enter
 
 **File:** `tests/login/enter-submit.spec.ts`
 
 **Steps:**
-  1. Preencher credenciais validas e pressionar Enter em #password
-    - expect: Login ocorre como no clique, redirecionando para /#/
+  1. Cobre: LOGIN-04, LOGIN-18. Preencher credenciais válidas do cliente e pressionar Enter no campo 'Senha'.
+    - expect: Login ocorre como no clique (API 200) e o usuário vai para /#/ autenticado
 
-#### 1.5. 1.5 Sessao persiste apos recarregar e /#/login ja logado
+#### 1.5. 1.5 Sessão persiste ao recarregar e /#/login com sessão ativa
 
 **File:** `tests/login/session-persist.spec.ts`
 
 **Steps:**
-  1. Logar como cliente e recarregar a pagina (F5)
-    - expect: Continua autenticado: 'Sair' visivel e 'Olá, Cliente Teste'
-    - expect: sessionStorage mantem token e user
-  2. Navegar para /#/login ja logado (via URL, hash ou recarregando em /#/login)
-    - expect: Observado (3 repeticoes): NAO ha redirecionamento; URL permanece /#/login, h1 'Entrar' e formulario exibidos, enquanto o cabecalho continua mostrando 'Olá, Cliente Teste' e 'Sair' (estado incoerente)
-    - expect: Registrar como possivel defeito de UX; o teste deve documentar o comportamento atual
-    - expect: Nota: em uma execucao isolada inicial o app ficou em /#/ apos o goto; nao reproduzido em 6 tentativas posteriores (provavel corrida com o redirecionamento do login)
+  1. Cobre: LOGIN-13, LOGIN-11. Logar como cliente e recarregar a página (F5) em /#/.
+    - expect: Continua autenticado: 'Olá, Cliente Teste' e 'Sair' visíveis
+    - expect: sessionStorage mantém token e user
+    - expect: GET /api/auth/me com o token da sessão responde 200
+  2. PERGUNTA EM ABERTO 5 (usuário já logado em /#/login). Com a sessão ativa, abrir /#/login diretamente e depois recarregar.
+    - expect: Comportamento observado, sem afirmar o correto: não há redirecionamento; a URL permanece /#/login, o h1 'Entrar' e o formulário aparecem enquanto o cabeçalho segue mostrando 'Olá, Cliente Teste' e 'Sair'. O teste deve documentar o estado atual
 
-#### 1.6. 1.6 Logout encerra a sessao
+#### 1.6. 1.6 Logout encerra a sessão e protege as áreas privadas
 
 **File:** `tests/login/logout.spec.ts`
 
 **Steps:**
-  1. Logar como cliente e clicar em 'Sair' (data-testid=logout)
-    - expect: Vai para /#/, sessionStorage sem token/user, cabecalho volta a 'Entrar' e 'Cadastrar'
-  2. Abrir /#/orders e usar o botao Voltar
-    - expect: /#/orders redireciona para /#/login?reason=auth; Voltar permanece em /#/login?reason=auth e nao concede acesso a area protegida
-  3. Logar, abrir /#/orders, clicar em 'Sair' e usar Voltar
-    - expect: Observado: Voltar leva a /#/login?reason=auth (entrada do historico criada pelo redirecionamento), cabecalho deslogado; nenhum dado de pedidos exibido
+  1. Cobre: LOGIN-14, LOGIN-12. Logar como cliente, abrir /#/orders e clicar em 'Sair'.
+    - expect: POST /api/auth/logout responde 204
+    - expect: Usuário vai para /#/; sessionStorage sem token e user; cabeçalho volta a 'Entrar' e 'Cadastrar'
+    - expect: O token usado antes do logout deixa de valer: GET /api/auth/me responde 401
+  2. Clicar no botão Voltar do navegador.
+    - expect: Nenhum dado de pedidos é exibido; o app mostra /#/login?reason=auth (h1 'Entrar') com cabeçalho deslogado
+  3. Sem sessão, abrir /#/orders.
+    - expect: Redireciona para /#/login?reason=auth
 
-### 2. 2. Credenciais invalidas e validacao
+### 2. 2. Validação de entrada e credenciais
 
 **Seed:** `tests/seed.spec.ts`
 
-#### 2.1. 2.1 Senha incorreta
-
-**File:** `tests/login/wrong-password.spec.ts`
-
-**Steps:**
-  1. Informar TEST_CLIENTE_EMAIL e senha errada e enviar
-    - expect: #form-error mostra 'E-mail ou senha inválidos' (401)
-    - expect: Permanece em /#/login; sem token no sessionStorage
-    - expect: Campos permanecem preenchidos (e-mail e senha nao sao limpos); botao habilitado
-
-#### 2.2. 2.2 Usuario inexistente
-
-**File:** `tests/login/unknown-user.spec.ts`
-
-**Steps:**
-  1. Informar naoexiste@qalab.com e qualquer senha
-    - expect: Mesma mensagem 'E-mail ou senha inválidos' do cenario 2.1 (sem enumeracao de usuarios)
-
-#### 2.3. 2.3 Campos vazios
+#### 2.1. 2.1 Campos obrigatórios vazios
 
 **File:** `tests/login/empty-fields.spec.ts`
 
 **Steps:**
-  1. Clicar em 'Entrar' sem preencher nada
-    - expect: #form-error mostra 'Informe e-mail e senha'
-    - expect: Nenhuma chamada a /api/auth/login; sem redirecionamento
-    - expect: Spans err-email/err-password permanecem vazios; aria-invalid nao e definido nos campos
-    - expect: Foco permanece no botao (nao vai para o primeiro campo invalido)
+  1. Cobre: LOGIN-01, LOGIN-02. PERGUNTA EM ABERTO 1 (textos oficiais das mensagens). Monitorar requisições a /api/auth/login. Clicar em 'Entrar' com os campos vazios; repetir só com e-mail preenchido (TEST_CLIENTE_EMAIL) e só com senha preenchida.
+    - expect: Nos 3 casos a tela informa o que falta e NENHUMA requisição é enviada à API; a regra é a mesma para e-mail vazio, senha vazia ou ambos
+    - expect: Permanece em /#/login, sem token no sessionStorage
+    - expect: DIVERGÊNCIA: a tela envia POST /api/auth/login nos 3 casos. Ambos vazios e só senha: API 400 e a tela mostra 'Informe e-mail e senha'. Só e-mail (senha vazia): API 401 e a tela mostra 'E-mail ou senha inválidos', mensagem diferente dos outros dois casos. Foco permanece no botão e não há aria-invalid nos campos
+  2. Verificar o contrato: POST /api/auth/login sem o campo password (e sem email).
+    - expect: API responde 400 (LOGIN-01); a API cumpre o critério
 
-#### 2.4. 2.4 Somente senha preenchida
-
-**File:** `tests/login/only-password.spec.ts`
-
-**Steps:**
-  1. Preencher so a senha e enviar
-    - expect: 'Informe e-mail e senha'; permanece em /#/login; sem chamada a API
-
-#### 2.5. 2.5 Somente e-mail preenchido (comportamento inconsistente)
-
-**File:** `tests/login/only-email.spec.ts`
-
-**Steps:**
-  1. Preencher so o e-mail valido, deixar senha vazia e enviar, monitorando requisicoes
-    - expect: Confirmado: 1 requisicao POST /api/auth/login com corpo {"email":"<TEST_CLIENTE_EMAIL>","password":""}
-    - expect: #form-error mostra 'E-mail ou senha inválidos' em vez de 'Informe e-mail e senha'
-    - expect: Registrar como defeito/inconsistencia de validacao no cliente; sem login
-  2. Repetir com senha contendo apenas espacos ('   ')
-    - expect: Tambem chama a API e retorna 'E-mail ou senha inválidos' (senha so de espacos nao e tratada como vazia)
-
-#### 2.6. 2.6 Formatos invalidos de e-mail
+#### 2.2. 2.2 Formato inválido de e-mail
 
 **File:** `tests/login/invalid-email-format.spec.ts`
 
 **Steps:**
-  1. Para cada valor (abc, a@x, 'a b@x.com') informar com senha qualquer e enviar
-    - expect: Confirmado: '#form-error' mostra 'Informe e-mail e senha' (mensagem generica e enganosa, pois o campo esta preenchido; sem mensagem especifica de formato)
-    - expect: Sem login e sem validacao nativa (novalidate); error-email permanece vazio
+  1. Cobre: LOGIN-03. Para cada valor ('abc', 'a@') informar uma senha qualquer e enviar, monitorando a rede.
+    - expect: A tela sinaliza o formato inválido do e-mail antes do envio (sem requisição à API)
+    - expect: DIVERGÊNCIA: a requisição é enviada, a API responde 400 e a tela mostra 'Informe e-mail e senha' (mensagem enganosa, pois o campo está preenchido); não há mensagem específica de formato nem aria-invalid. O formulário tem novalidate, então a validação nativa do navegador não aparece
 
-#### 2.7. 2.7 Correcao apos erro
+#### 2.3. 2.3 Credenciais inválidas: senha errada e e-mail não cadastrado
+
+**File:** `tests/login/wrong-credentials.spec.ts`
+
+**Steps:**
+  1. Cobre: LOGIN-05, LOGIN-06. Informar TEST_CLIENTE_EMAIL com senha errada e enviar; depois informar 'naoexiste@qalab.com' com uma senha qualquer.
+    - expect: Nos dois casos a API responde 401 e a tela mostra a MESMA mensagem ('E-mail ou senha inválidos', texto atual; PERGUNTA EM ABERTO 1), sem revelar se o e-mail existe
+    - expect: Permanece em /#/login, sem token no sessionStorage, campos preenchidos e botão habilitado
+  2. PERGUNTA EM ABERTO 7 (mínimo de 8 caracteres no login). Informar TEST_CLIENTE_EMAIL com senha curta ('x').
+    - expect: Comportamento observado, sem afirmar o correto: a requisição é enviada e a tela mostra a mesma mensagem 'E-mail ou senha inválidos' (API 401), sem validação de tamanho mínimo
+
+#### 2.4. 2.4 E-mail com maiúsculas e espaços nas bordas
+
+**File:** `tests/login/email-case-whitespace.spec.ts`
+
+**Steps:**
+  1. Cobre: PERGUNTA EM ABERTO 2 (sem critério LOGIN associado; complementa LOGIN-04). Logar com TEST_CLIENTE_EMAIL em maiúsculas e senha correta; repetir com espaços antes e depois do e-mail.
+    - expect: Comportamento observado, sem afirmar o correto: ambos os logins são aceitos (200), vão para /#/ e o user.email retornado vem em minúsculas
+
+#### 2.5. 2.5 Nova tentativa válida após erro
 
 **File:** `tests/login/retry-after-error.spec.ts`
 
 **Steps:**
-  1. Errar a senha, depois corrigir e reenviar
-    - expect: Login ocorre e o usuario chega a /#/; mensagem de erro anterior nao permanece
+  1. Cobre: LOGIN-17. Errar a senha (mensagem de erro visível) e, sem recarregar, corrigir a senha e reenviar.
+    - expect: Login funciona e o usuário chega a /#/ autenticado
+    - expect: A mensagem de erro anterior não permanece (área de erro vazia ou tela trocada)
 
-#### 2.8. 2.8 Mensagem de erro persiste ao digitar
-
-**File:** `tests/login/error-persistence.spec.ts`
-
-**Steps:**
-  1. Provocar 'E-mail ou senha inválidos' (somente e-mail preenchido), depois digitar na senha e em seguida limpar o e-mail
-    - expect: Observado: #form-error NAO some nem muda enquanto o usuario digita ou limpa campos; so e substituido/limpo no proximo envio
-    - expect: Registrar como melhoria de UX (erro obsoleto permanece visivel)
-
-### 3. 3. Comportamentos da UI
+### 3. 3. Após o login, rotas protegidas e API
 
 **Seed:** `tests/seed.spec.ts`
 
-#### 3.1. 3.1 Estado do botao e duplo envio
-
-**File:** `tests/login/submit-state.spec.ts`
-
-**Steps:**
-  1. Interceptar **/api/auth/login com atraso de 1,5 s, preencher credenciais validas e clicar em 'Entrar'; apos 300 ms inspecionar o botao
-    - expect: Observado: botao permanece habilitado, texto 'Entrar', sem aria-busy no botao nem no formulario (sem estado de carregamento)
-  2. Clicar uma segunda vez em 'Entrar' enquanto a primeira requisicao esta pendente
-    - expect: Observado: 2 requisicoes POST /api/auth/login sao enviadas (sem protecao contra duplo envio); o usuario termina logado em /#/
-  3. Sem atraso, executar dblclick no botao 'Entrar'
-    - expect: Observado: tambem 2 requisicoes; login conclui em /#/. Registrar como defeito de robustez (deveria desabilitar o botao durante o envio)
-
-#### 3.2. 3.2 Redirecionamento com motivo de autenticacao
+#### 3.1. 3.1 Redirecionamento com motivo e retorno ao destino
 
 **File:** `tests/login/redirect-reason.spec.ts`
 
 **Steps:**
-  1. Sem login, abrir /#/checkout
-    - expect: URL vira /#/login?reason=auth
-    - expect: Texto 'Entre para continuar.' exibido no main
-  2. Fazer login valido a partir desta tela
-    - expect: Observado: redireciona para /#/ (Catalogo), NAO para /#/checkout; o destino original e perdido
-    - expect: Mesmo resultado ao abrir diretamente /#/login?reason=auth ou apos ser redirecionado de /#/orders
-    - expect: Registrar como possivel melhoria (retorno ao destino original)
-  3. Apos o login, usar o botao Voltar
-    - expect: Observado: volta para /#/login?reason=auth com formulario exibido e sessao ativa (cabecalho logado); mesma incoerencia do cenario 1.5
+  1. Cobre: LOGIN-09, LOGIN-12. Sem sessão, abrir /#/orders (repetir com /#/checkout).
+    - expect: Redireciona para /#/login?reason=auth e a tela exibe o motivo 'Entre para continuar.'
+  2. Fazer login válido do cliente a partir dessa tela.
+    - expect: Após o login o usuário volta para a área que tentava acessar (/#/orders, h1 'Meus pedidos')
+    - expect: DIVERGÊNCIA: a tela sempre redireciona para /#/ (Catálogo); o destino original é perdido
 
-#### 3.3. 3.3 Navegacao por teclado e acessibilidade
-
-**File:** `tests/login/keyboard-a11y.spec.ts`
-
-**Steps:**
-  1. Usar Tab a partir do campo E-mail ate o botao e enviar com Enter
-    - expect: Ordem: E-mail, Senha, Entrar; foco visivel; login possivel so com teclado
-    - expect: Campos com label associada; #form-error com role=alert
-
-#### 3.4. 3.4 Link de cadastro no cabecalho
-
-**File:** `tests/login/register-link.spec.ts`
-
-**Steps:**
-  1. Clicar em 'Cadastrar' (data-testid=nav-register) e voltar
-    - expect: Navega para /#/register; ao voltar, login exibido limpo
-    - expect: Nao ha link 'Esqueci a senha'
-
-#### 3.5. 3.5 Viewport mobile
-
-**File:** `tests/login/responsive.spec.ts`
-
-**Steps:**
-  1. Abrir o login em 375x667 e logar como cliente
-    - expect: Layout utilizavel sem sobreposicao e login funcional
-
-### 4. 4. Sessao e rotas protegidas
-
-**Seed:** `tests/seed.spec.ts`
-
-#### 4.1. 4.1 Rotas protegidas sem login
+#### 3.2. 3.2 Áreas protegidas exigem login
 
 **File:** `tests/login/protected-routes.spec.ts`
 
 **Steps:**
-  1. Em contexto limpo abrir /#/orders e /#/checkout
-    - expect: /#/orders -> /#/login?reason=auth (corrigido; antes registrado como /#/login)
-    - expect: /#/checkout -> /#/login?reason=auth
+  1. Cobre: LOGIN-12. Em contexto limpo abrir /#/cart, /#/orders e /#/checkout.
+    - expect: Cada rota redireciona para /#/login?reason=auth; nenhum dado de carrinho ou pedidos é exibido
+  2. Logado como cliente, abrir /#/orders e /#/checkout com carrinho vazio.
+    - expect: /#/orders exibe h1 'Meus pedidos'; /#/checkout com carrinho vazio vai para /#/cart (h1 'Carrinho')
 
-#### 4.2. 4.2 Cliente logado acessa rotas de admin
-
-**File:** `tests/login/admin-routes-as-customer.spec.ts`
-
-**Steps:**
-  1. Logar como cliente e abrir /#/admin e /#/admin/products
-    - expect: h1 'Página não encontrada'; nenhum dado administrativo exposto
-    - expect: Rota inexistente /#/rota-xyz tem o mesmo comportamento
-
-#### 4.3. 4.3 Cliente logado acessa area autenticada
-
-**File:** `tests/login/orders-as-customer.spec.ts`
-
-**Steps:**
-  1. Logar como cliente e abrir /#/orders; abrir /#/checkout com carrinho vazio
-    - expect: /#/orders exibe h1 'Meus pedidos'
-    - expect: /#/checkout com carrinho vazio redireciona para /#/cart (h1 'Carrinho')
-
-#### 4.4. 4.4 Sessao isolada por aba (sessionStorage)
+#### 3.3. 3.3 Escopo da sessão entre abas
 
 **File:** `tests/login/session-scope.spec.ts`
 
 **Steps:**
-  1. Logar em uma aba e abrir o app em nova aba/contexto
-    - expect: Nova aba nao esta autenticada (token em sessionStorage, nao em localStorage/cookie)
+  1. Cobre: LOGIN-13. PERGUNTA EM ABERTO 4 (duração e escopo da sessão). Logar em uma aba e abrir o app em nova aba/contexto.
+    - expect: Comportamento observado, sem afirmar o correto: a sessão fica em sessionStorage (token e user), então a nova aba não está autenticada; localStorage e cookies ficam vazios. Não foi observada expiração do token
 
-#### 4.5. 4.5 Token invalido ou ausente no sessionStorage
+#### 3.4. 3.4 Contrato da API de autenticação e perfis
 
-**File:** `tests/login/invalid-token.spec.ts`
-
-**Steps:**
-  1. Logar como cliente, definir sessionStorage.token = 'invalido' e recarregar em /#/
-    - expect: Observado: cabecalho continua logado ('Olá, Cliente Teste', 'Sair'); o token nao e validado no carregamento
-  2. Abrir /#/orders com o token invalido
-    - expect: Observado: redireciona para /#/login?reason=auth e o sessionStorage e esvaziado (token e user removidos), indicando tratamento de 401 pela API
-  3. Logar, remover somente sessionStorage.token, recarregar e abrir /#/orders
-    - expect: Observado: em / o cabecalho ainda aparece logado (usa user); /#/orders redireciona para /#/login?reason=auth
-
-#### 4.6. 4.6 Adulteracao de sessionStorage.user
-
-**File:** `tests/login/tampered-user.spec.ts`
+**File:** `tests/login/api-auth-contract.spec.ts`
 
 **Steps:**
-  1. Logar como cliente, alterar sessionStorage.user para role 'admin' e name 'Hacker' e recarregar
-    - expect: Observado: cabecalho exibe 'Olá, Hacker' (UI confia no user local); nao ha novos itens de menu nem rotas admin (/#/admin* segue 'Página não encontrada')
-    - expect: Verificar que dados protegidos continuam dependendo do token (API) e registrar como observacao de seguranca de baixa gravidade
+  1. Cobre: LOGIN-01, LOGIN-04, LOGIN-05, LOGIN-10, LOGIN-11, LOGIN-14. Via request da API: POST /api/auth/login com credenciais válidas do cliente, inválidas e sem password.
+    - expect: 200 com token e user; 401 para credenciais inválidas; 400 com campo ausente
+  2. GET /api/auth/me com o token do cliente, sem token e com token 'invalido'.
+    - expect: 200 com o usuário; 401 sem token; 401 com token inválido
+  3. GET /api/admin/orders com token do cliente, com token do admin (TEST_ADMIN_EMAIL/TEST_ADMIN_PASSWORD) e sem token.
+    - expect: Cliente: 403; admin: 200; sem token: 401
+  4. POST /api/auth/logout com o token do cliente e, em seguida, GET /api/auth/me com o mesmo token.
+    - expect: Logout responde 204 e /api/auth/me passa a responder 401
 
-### 5. 5. Casos de borda e seguranca basica
+#### 3.5. 3.5 Credenciais fora da URL, do storage e do console
+
+**File:** `tests/login/credentials-exposure.spec.ts`
+
+**Steps:**
+  1. Cobre: LOGIN-07. Enviar o formulário com credenciais válidas e com senha errada, inspecionando URL, requisições, storage e console.
+    - expect: Credenciais só no corpo JSON de POST /api/auth/login; nenhuma URL contém e-mail ou senha
+    - expect: Senha ausente de sessionStorage, localStorage, cookies e mensagens de console
+
+### 4. 4. Erros de servidor/rede e comportamento do envio
 
 **Seed:** `tests/seed.spec.ts`
 
-#### 5.1. 5.1 E-mail em maiusculas
+#### 4.1. 4.1 Falha do servidor e da rede
 
-**File:** `tests/login/email-case.spec.ts`
-
-**Steps:**
-  1. Logar com TEST_ADMIN_EMAIL em maiusculas e senha correta
-    - expect: Login aceito (e-mail case-insensitive), user.email retornado em minusculas
-
-#### 5.2. 5.2 Espacos nas bordas
-
-**File:** `tests/login/whitespace.spec.ts`
+**File:** `tests/login/network-failure.spec.ts`
 
 **Steps:**
-  1. E-mail com espacos antes/depois e senha correta
-    - expect: Login aceito (e-mail sofre trim)
-  2. Senha correta precedida de um espaco
-    - expect: 'E-mail ou senha inválidos' (senha nao sofre trim)
+  1. Cobre: LOGIN-15. PERGUNTA EM ABERTO 1 (textos oficiais). Interceptar /api/auth/login retornando 500 com JSON {"error":"Internal Server Error"}; depois abortar a requisição (falha de rede); depois responder 503 com corpo HTML.
+    - expect: Em cada caso a tela mostra mensagem amigável em português, sem sessão criada, e o formulário continua utilizável (campos preenchidos, botão habilitado)
+    - expect: DIVERGÊNCIA: 500 mostra o texto cru do servidor 'Internal Server Error' (inglês); falha de rede mostra 'Failed to fetch' (inglês, técnico); 503 com HTML mostra 'Erro inesperado'. O formulário continua utilizável nos três
+
+#### 4.2. 4.2 Estado de carregamento e duplo envio
+
+**File:** `tests/login/submit-state.spec.ts`
+
+**Steps:**
+  1. Cobre: LOGIN-16. Interceptar /api/auth/login com atraso de 2 s, preencher credenciais e dar duplo clique em 'Entrar'.
+    - expect: Durante o envio a tela indica carregamento (botão desabilitado ou com texto/aria-busy de carregamento)
+    - expect: Apenas 1 requisição POST /api/auth/login é enviada
+    - expect: DIVERGÊNCIA: o botão continua habilitado com o texto 'Entrar', sem aria-busy, e 2 requisições são enviadas
+
+#### 4.3. 4.3 Tentativas inválidas repetidas
+
+**File:** `tests/login/rate-limit.spec.ts`
+
+**Steps:**
+  1. Cobre: PERGUNTA EM ABERTO 3 (sem critério LOGIN associado). Enviar 12 tentativas inválidas seguidas via API para TEST_CLIENTE_EMAIL e depois um login válido.
+    - expect: Comportamento observado, sem afirmar o correto: as 12 respostas são 401, sem 429, sem bloqueio nem atraso; em seguida o login válido responde 200
+
+### 5. 5. Acessibilidade e entradas maliciosas
+
+**Seed:** `tests/seed.spec.ts`
+
+#### 5.1. 5.1 Teclado e leitores de tela
+
+**File:** `tests/login/keyboard-a11y.spec.ts`
+
+**Steps:**
+  1. Cobre: LOGIN-18. Em /#/login, usar Tab para percorrer 'E-mail', 'Senha' e 'Entrar'; enviar com Enter no botão. Depois provocar um erro de credenciais.
+    - expect: Ordem do foco: E-mail, Senha, Entrar; login possível só com teclado
+    - expect: Campos com rótulo associado (getByLabel 'E-mail' e 'Senha' funcionam)
+    - expect: O erro aparece na região role=alert, anunciada a leitores de tela
+
+#### 5.2. 5.2 XSS e injeção SQL nos campos
+
+**File:** `tests/login/malicious-input.spec.ts`
+
+**Steps:**
+  1. Cobre: LOGIN-19. Registrar diálogos. Enviar e-mail '<script>alert(1)</script>@x.com' com senha '<img src=x onerror=alert(1)>'; e e-mail "admin@qalab.com'--" com senha "' OR '1'='1"; repetir via API POST /api/auth/login com os mesmos payloads.
+    - expect: Nenhum diálogo ou script executado; nenhuma tag injetada no DOM; a mensagem de erro é exibida como texto
+    - expect: Login recusado, página sem travar e nenhuma resposta 500 (a API responde 400 ou 401)
 
 #### 5.3. 5.3 Entradas muito longas
 
 **File:** `tests/login/long-input.spec.ts`
 
 **Steps:**
-  1. E-mail com 5000 caracteres + @x.com e senha de 5000 caracteres
-    - expect: 'E-mail ou senha inválidos', pagina sem travar, sem erro 500
-
-#### 5.4. 5.4 XSS nos campos
-
-**File:** `tests/login/xss.spec.ts`
-
-**Steps:**
-  1. E-mail '<img src=x onerror=alert(1)>@x.com' e senha '<script>alert(1)</script>'
-    - expect: Nenhum dialogo/script executado (0 dialogos); mensagem exibida como texto ('Informe e-mail e senha')
-
-#### 5.5. 5.5 Injecao SQL
-
-**File:** `tests/login/sqli.spec.ts`
-
-**Steps:**
-  1. E-mail "' OR '1'='1' --@x.com" e senha "' OR '1'='1"; repetir com e-mail "admin@qalab.com' --"
-    - expect: Login recusado, sem erro 500 ou mensagem tecnica
-    - expect: Observado: ambos os e-mails sao barrados no cliente com 'Informe e-mail e senha' (formato invalido) e nao chegam a API; para exercitar o backend, interceptar/enviar via API POST /api/auth/login com o payload e confirmar 401 sem 500
-
-#### 5.6. 5.6 Credenciais fora da URL
-
-**File:** `tests/login/credentials-exposure.spec.ts`
-
-**Steps:**
-  1. Enviar formulario e inspecionar URL, rede e storage
-    - expect: Credenciais nao aparecem na URL; POST /api/auth/login com corpo JSON
-    - expect: Senha nao fica em storage nem console
-
-#### 5.7. 5.7 Falha do servidor, de rede e respostas anomalas
-
-**File:** `tests/login/network-failure.spec.ts`
-
-**Steps:**
-  1. Interceptar /api/auth/login retornando 500
-    - expect: #form-error mostra 'Erro inesperado'; sem sessao; formulario reutilizavel
-  2. Abortar a requisicao (offline)
-    - expect: Observado: '#form-error' mostra 'Failed to fetch' (mensagem tecnica em ingles, nao amigavel); registrar como melhoria
-  3. Interceptar retornando 429 com JSON {"error":"Too many"}
-    - expect: Observado: '#form-error' mostra 'Too many' (texto cru do servidor, sem mensagem tratada)
-  4. Interceptar retornando 200 com corpo JSON malformado ('{')
-    - expect: Observado: '#form-error' mostra a mensagem tecnica de JS "Cannot destructure property 'token' of ... is null." ou similar; registrar como defeito de tratamento de erro; sem sessao criada
-
-#### 5.8. 5.8 Tentativas repetidas
-
-**File:** `tests/login/rate-limit.spec.ts`
-
-**Steps:**
-  1. Enviar 12 tentativas invalidas seguidas para TEST_CLIENTE_EMAIL (senhas diferentes), medindo status e tempo
-    - expect: Observado: as 12 respostas foram 401, cada uma em cerca de 30 a 90 ms; sem 429, sem bloqueio de conta e sem atraso progressivo
-    - expect: App continua funcional: em seguida o login valido retorna 200 e redireciona para /#/
-    - expect: Registrar como risco de seguranca: ausencia de rate limit/bloqueio contra forca bruta
+  1. Cobre: LOGIN-19. Enviar e-mail com 10000 caracteres antes de '@x.com' e senha de 100000 caracteres; repetir com cada campo longo isoladamente (e-mail 100000 caracteres; senha 100000 caracteres) e via API.
+    - expect: Página não trava e a resposta não é 500; tela mostra erro de credenciais ou de validação
+    - expect: Campos longos isolados: API 401 e mensagem 'E-mail ou senha inválidos' (comportamento correto)
+    - expect: DIVERGÊNCIA: com os dois campos longos juntos (corpo acima de cerca de 120 mil caracteres; confirmado com 60000 + 60000) a API responde 500 {"error":"Erro interno"} e a tela mostra 'Erro interno'
